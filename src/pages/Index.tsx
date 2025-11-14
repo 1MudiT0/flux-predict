@@ -1,12 +1,23 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import Hero from "@/components/Hero";
+import TrendingStocks from "@/components/TrendingStocks";
+import MarketNews from "@/components/MarketNews";
+import AIPredictions from "@/components/AIPredictions";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen">
+      <Hero />
+      <TrendingStocks />
+      <MarketNews />
+      <AIPredictions />
+      
+      <footer className="bg-card border-t border-border py-8 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-muted-foreground">
+            © 2025 Smart Stock Analysis. Market data and predictions for informational purposes only.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
