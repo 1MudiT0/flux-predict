@@ -1,5 +1,6 @@
 import Hero from "@/components/Hero";
 import TrendingStocks from "@/components/TrendingStocks";
+import Watchlist from "@/components/Watchlist";
 import MarketNews from "@/components/MarketNews";
 import AIPredictions from "@/components/AIPredictions";
 
@@ -8,6 +9,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Hero />
       <TrendingStocks />
+      <Watchlist />
       <MarketNews />
       <AIPredictions />
       
