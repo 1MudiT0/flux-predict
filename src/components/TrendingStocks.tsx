@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis } from "recharts";
 
 interface Stock {
   symbol: string;
@@ -101,24 +102,29 @@ const TrendingStocks = () => {
                     </p>
                   </div>
                   <div className="h-20">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer
+                      config={{
+                        value: {
+                          label: "Price",
+                          color: stock.change >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))",
+                        },
+                      }}
+                      className="h-full w-full"
+                    >
                       <LineChart data={stock.chartData}>
-                        <Tooltip 
-                          contentStyle={{ 
-                            background: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }}
-                        />
+                        <XAxis dataKey="index" hide />
+                        <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
+                        <ChartTooltip content={<ChartTooltipContent />} />
                         <Line 
                           type="monotone" 
                           dataKey="value" 
                           stroke={stock.change >= 0 ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} 
                           strokeWidth={2}
                           dot={false}
+                          animationDuration={300}
                         />
                       </LineChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                   </div>
                 </div>
               </CardContent>
