@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Brain, Search, TrendingUp } from "lucide-react";
+import { Brain, Search, TrendingUp, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const AIPredictions = () => {
@@ -22,40 +23,72 @@ const AIPredictions = () => {
     }
 
     setLoading(true);
+    setPrediction(null);
     
-    // Simulate AI prediction with realistic data
-    setTimeout(() => {
-      const currentPrice = Math.random() * 500 + 50;
+    try {
+      // First, validate the stock exists by fetching real data
+      const { data, error } = await supabase.functions.invoke('get-stock-data', {
+        body: { symbols: [ticker.toUpperCase()] }
+      });
+
+      if (error) throw error;
+
+      // Check if we got valid stock data
+      if (!data?.stockData || data.stockData.length === 0) {
+        setLoading(false);
+        toast({
+          title: "Invalid Stock Symbol",
+          description: `"${ticker.toUpperCase()}" is not a valid stock symbol. Please check and try again.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const stockData = data.stockData[0];
+      const currentPrice = stockData.price;
+
+      // Generate AI prediction based on real current price
       const predictions = [];
       let price = currentPrice;
+      const trend = stockData.changePercent > 0 ? 1.02 : 0.98; // Slight bias based on current trend
       
       for (let i = 0; i <= 30; i += 5) {
-        const variance = (Math.random() - 0.5) * 20;
-        price = Math.max(price + variance, currentPrice * 0.8);
+        const variance = (Math.random() - 0.5) * (currentPrice * 0.05); // 5% variance
+        const trendFactor = Math.pow(trend, i / 5);
+        price = currentPrice * trendFactor + variance;
         predictions.push({
           day: i === 0 ? 'Today' : `+${i}d`,
           actual: i === 0 ? currentPrice : null,
           predicted: price,
-          confidence: Math.random() * 20 + 75
+          confidence: Math.max(95 - i * 1.5, 70) // Confidence decreases over time
         });
       }
 
       setPrediction({
-        ticker: ticker.toUpperCase(),
+        ticker: stockData.symbol.replace('.NS', ''),
+        name: stockData.name,
         currentPrice: currentPrice.toFixed(2),
         predictedPrice: predictions[predictions.length - 1].predicted.toFixed(2),
         change: ((predictions[predictions.length - 1].predicted - currentPrice) / currentPrice * 100).toFixed(2),
-        confidence: 82.5,
-        chartData: predictions
+        confidence: 85.5,
+        chartData: predictions,
+        currency: 'INR'
       });
-      
-      setLoading(false);
       
       toast({
         title: "Prediction Generated",
-        description: `AI analysis complete for ${ticker.toUpperCase()}`,
+        description: `AI analysis complete for ${stockData.symbol.replace('.NS', '')}`,
       });
-    }, 2000);
+    } catch (error: any) {
+      console.error('Error generating prediction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate prediction. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -83,31 +116,37 @@ const AIPredictions = () => {
               <CardDescription>Enter a stock ticker to generate AI-powered price predictions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4">
-                <Input
-                  placeholder="Enter stock ticker (e.g., AAPL, TSLA, MSFT)"
-                  value={ticker}
-                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  onKeyPress={(e) => e.key === 'Enter' && handlePredict()}
-                  className="text-lg"
-                />
-                <Button 
-                  onClick={handlePredict} 
-                  disabled={loading}
-                  className="bg-gradient-primary hover:opacity-90 transition-opacity"
-                >
-                  {loading ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent mr-2" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="mr-2 h-5 w-5" />
-                      Predict
-                    </>
-                  )}
-                </Button>
+              <div className="space-y-3">
+                <div className="flex gap-4">
+                  <Input
+                    placeholder="Enter stock ticker (e.g., AAPL, RELIANCE.NS, TCS.NS)"
+                    value={ticker}
+                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                    onKeyPress={(e) => e.key === 'Enter' && handlePredict()}
+                    className="text-lg"
+                  />
+                  <Button 
+                    onClick={handlePredict} 
+                    disabled={loading}
+                    className="bg-gradient-primary hover:opacity-90 transition-opacity whitespace-nowrap"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent mr-2" />
+                        Validating...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="mr-2 h-5 w-5" />
+                        Predict
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                  <p>Enter valid stock symbols. Indian stocks require .NS suffix (e.g., TCS.NS)</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -118,6 +157,7 @@ const AIPredictions = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-3xl">{prediction.ticker}</CardTitle>
+                    <CardDescription className="mt-1">{prediction.name}</CardDescription>
                     <CardDescription className="mt-2">30-Day Price Forecast</CardDescription>
                   </div>
                   <div className="text-right">
@@ -130,11 +170,11 @@ const AIPredictions = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1">Current Price</div>
-                    <div className="text-2xl font-bold">${prediction.currentPrice}</div>
+                    <div className="text-2xl font-bold">₹{parseFloat(prediction.currentPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1">Predicted Price (30d)</div>
-                    <div className="text-2xl font-bold">${prediction.predictedPrice}</div>
+                    <div className="text-2xl font-bold">₹{parseFloat(prediction.predictedPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
@@ -159,7 +199,7 @@ const AIPredictions = () => {
                       />
                       <YAxis 
                         stroke="hsl(var(--muted-foreground))"
-                        tickFormatter={(value) => `$${value.toFixed(0)}`}
+                        tickFormatter={(value) => `₹${value.toFixed(0)}`}
                       />
                       <Tooltip 
                         contentStyle={{ 
@@ -167,7 +207,7 @@ const AIPredictions = () => {
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px'
                         }}
-                        formatter={(value: any) => `$${value.toFixed(2)}`}
+                        formatter={(value: any) => `₹${value.toFixed(2)}`}
                       />
                       <Legend />
                       <Line 
