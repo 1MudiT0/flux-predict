@@ -27,14 +27,14 @@ const AIPredictions = () => {
     
     try {
       // First, validate the stock exists by fetching real data
-      const { data, error } = await supabase.functions.invoke('get-stock-data', {
+      const { data: stockResponse, error: stockError } = await supabase.functions.invoke('get-stock-data', {
         body: { symbols: [ticker.toUpperCase()] }
       });
 
-      if (error) throw error;
+      if (stockError) throw stockError;
 
       // Check if we got valid stock data
-      if (!data?.stockData || data.stockData.length === 0) {
+      if (!stockResponse?.stockData || stockResponse.stockData.length === 0) {
         setLoading(false);
         toast({
           title: "Invalid Stock Symbol",
@@ -44,46 +44,44 @@ const AIPredictions = () => {
         return;
       }
 
-      const stockData = data.stockData[0];
-      const currentPrice = stockData.price;
+      const stockData = stockResponse.stockData[0];
 
-      // Generate AI prediction based on real current price
-      const predictions = [];
-      let price = currentPrice;
-      const trend = stockData.changePercent > 0 ? 1.02 : 0.98; // Slight bias based on current trend
-      
-      for (let i = 0; i <= 30; i += 5) {
-        const variance = (Math.random() - 0.5) * (currentPrice * 0.05); // 5% variance
-        const trendFactor = Math.pow(trend, i / 5);
-        price = currentPrice * trendFactor + variance;
-        predictions.push({
-          day: i === 0 ? 'Today' : `+${i}d`,
-          actual: i === 0 ? currentPrice : null,
-          predicted: price,
-          confidence: Math.max(95 - i * 1.5, 70) // Confidence decreases over time
-        });
+      // Generate AI prediction using Lovable AI
+      const { data: predictionData, error: predictionError } = await supabase.functions.invoke('predict-stock', {
+        body: { stockData }
+      });
+
+      if (predictionError) {
+        if (predictionError.message?.includes('429')) {
+          toast({
+            title: "Rate Limit Exceeded",
+            description: "Too many requests. Please try again in a moment.",
+            variant: "destructive"
+          });
+          return;
+        }
+        if (predictionError.message?.includes('402')) {
+          toast({
+            title: "AI Credits Required",
+            description: "Please add credits to your workspace to continue using AI predictions.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw predictionError;
       }
 
-      setPrediction({
-        ticker: stockData.symbol.replace('.NS', ''),
-        name: stockData.name,
-        currentPrice: currentPrice.toFixed(2),
-        predictedPrice: predictions[predictions.length - 1].predicted.toFixed(2),
-        change: ((predictions[predictions.length - 1].predicted - currentPrice) / currentPrice * 100).toFixed(2),
-        confidence: 85.5,
-        chartData: predictions,
-        currency: 'INR'
-      });
+      setPrediction(predictionData);
       
       toast({
-        title: "Prediction Generated",
-        description: `AI analysis complete for ${stockData.symbol.replace('.NS', '')}`,
+        title: "AI Prediction Generated",
+        description: `Smart analysis complete for ${stockData.symbol.replace('.NS', '')}`,
       });
     } catch (error: any) {
       console.error('Error generating prediction:', error);
       toast({
         title: "Error",
-        description: "Failed to generate prediction. Please try again.",
+        description: error.message || "Failed to generate prediction. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -133,12 +131,12 @@ const AIPredictions = () => {
                     {loading ? (
                       <>
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent mr-2" />
-                        Validating...
+                        AI Analyzing...
                       </>
                     ) : (
                       <>
                         <Brain className="mr-2 h-5 w-5" />
-                        Predict
+                        Predict with AI
                       </>
                     )}
                   </Button>
@@ -231,9 +229,22 @@ const AIPredictions = () => {
                   </ResponsiveContainer>
                 </div>
 
+                {prediction.keyFactors && (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="text-sm font-semibold text-foreground mb-2">
+                      AI Analysis - {prediction.trendDirection === 'bullish' ? '📈 Bullish' : prediction.trendDirection === 'bearish' ? '📉 Bearish' : '➡️ Neutral'} Outlook
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      {prediction.keyFactors.map((factor: string, idx: number) => (
+                        <div key={idx}>• {factor}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
                   <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Disclaimer:</strong> This prediction is generated using AI and historical market data. 
+                    <strong className="text-foreground">Disclaimer:</strong> This prediction is generated using AI and analyzes current market data and trends. 
                     It should not be considered as financial advice. Always conduct your own research and consult with 
                     financial professionals before making investment decisions.
                   </p>

@@ -1,1 +1,7 @@
 project_id = "yzwbkpaprtbyqrjsfvmi"
+
+[functions.get-stock-data]
+verify_jwt = false
+
+[functions.predict-stock]
+verify_jwt = false
