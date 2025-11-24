@@ -168,11 +168,11 @@ const AIPredictions = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1">Current Price</div>
-                    <div className="text-2xl font-bold">₹{parseFloat(prediction.currentPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                    <div className="text-2xl font-bold">{prediction.currency === 'INR' ? '₹' : '$'}{parseFloat(prediction.currentPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1">Predicted Price (30d)</div>
-                    <div className="text-2xl font-bold">₹{parseFloat(prediction.predictedPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                    <div className="text-2xl font-bold">{prediction.currency === 'INR' ? '₹' : '$'}{parseFloat(prediction.predictedPrice).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
@@ -197,7 +197,7 @@ const AIPredictions = () => {
                       />
                       <YAxis 
                         stroke="hsl(var(--muted-foreground))"
-                        tickFormatter={(value) => `₹${value.toFixed(0)}`}
+                        tickFormatter={(value) => `${prediction.currency === 'INR' ? '₹' : '$'}${value.toFixed(0)}`}
                       />
                       <Tooltip 
                         contentStyle={{ 
@@ -205,7 +205,7 @@ const AIPredictions = () => {
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px'
                         }}
-                        formatter={(value: any) => `₹${value.toFixed(2)}`}
+                        formatter={(value: any) => `${prediction.currency === 'INR' ? '₹' : '$'}${value.toFixed(2)}`}
                       />
                       <Legend />
                       <Line 
