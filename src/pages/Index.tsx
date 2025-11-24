@@ -5,6 +5,7 @@ import TrendingStocks from "@/components/TrendingStocks";
 import Watchlist from "@/components/Watchlist";
 import MarketNews from "@/components/MarketNews";
 import AIPredictions from "@/components/AIPredictions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
@@ -33,6 +34,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      <ThemeToggle />
       <nav className="bg-card border-b border-border py-4 px-4 sticky top-0 z-50 backdrop-blur-sm bg-card/95">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Stock Analysis Platform</h1>
