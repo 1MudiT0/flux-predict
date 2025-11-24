@@ -11,6 +11,9 @@ interface Stock {
   change: number;
   changePercent: number;
   chartData: { time: string; price: number }[];
+  currency?: string;
+  marketState?: string;
+  exchange?: string;
 }
 
 const TrendingStocks = () => {
@@ -74,7 +77,7 @@ const TrendingStocks = () => {
           )}
         </div>
         <div className="flex items-center gap-4 mb-8">
-          <p className="text-muted-foreground">Real-time market movers (INR)</p>
+          <p className="text-muted-foreground">Real-time market movers</p>
           {stocks.length > 0 && (
             <span className="text-xs text-muted-foreground">
               Updated: {lastUpdate.toLocaleTimeString('en-IN')}
@@ -121,10 +124,10 @@ const TrendingStocks = () => {
                   <div className="space-y-4">
                     <div>
                       <p className="text-3xl font-bold">
-                        ₹{stock.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        {stock.currency === 'INR' ? '₹' : '$'}{stock.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </p>
                       <p className={`text-sm font-medium ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {stock.change >= 0 ? '+' : ''}₹{stock.change.toFixed(2)} today
+                        {stock.change >= 0 ? '+' : ''}{stock.currency === 'INR' ? '₹' : '$'}{Math.abs(stock.change).toFixed(2)} today
                       </p>
                     </div>
                     {stock.chartData && stock.chartData.length > 0 && (
