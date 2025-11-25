@@ -25,10 +25,12 @@ serve(async (req) => {
 You analyze stock data and generate realistic 30-day price forecasts based on current trends, market conditions, and technical analysis.
 Consider the current price, recent price changes, and overall market sentiment.`;
 
+    const currencySymbol = stockData.currency === 'INR' ? '₹' : '$';
     const userPrompt = `Analyze this stock and predict its price for the next 30 days:
 
 Stock: ${stockData.name} (${stockData.symbol})
-Current Price: ₹${stockData.price}
+Current Price: ${currencySymbol}${stockData.price}
+Currency: ${stockData.currency}
 Today's Change: ${stockData.changePercent}%
 Recent Trend: ${stockData.changePercent > 0 ? 'Upward' : 'Downward'}
 
@@ -144,7 +146,7 @@ Also provide:
       trendDirection: predictionData.trend_direction,
       keyFactors: predictionData.key_factors,
       chartData,
-      currency: 'INR'
+      currency: stockData.currency || 'INR'
     };
 
     return new Response(
