@@ -22,36 +22,13 @@ interface Stock {
 
 const Watchlist = () => {
   const [watchlist, setWatchlist] = useState<Stock[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [stockSymbol, setStockSymbol] = useState("");
   const [showAddStock, setShowAddStock] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [addingStock, setAddingStock] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { toast } = useToast();
   const { user } = useAuth();
-
-  const availableStocks = [
-    // Popular Indian Stocks (NSE)
-    { symbol: "RELIANCE.NS", name: "Reliance Industries" },
-    { symbol: "TCS.NS", name: "Tata Consultancy Services" },
-    { symbol: "HDFCBANK.NS", name: "HDFC Bank" },
-    { symbol: "INFY.NS", name: "Infosys Limited" },
-    { symbol: "ICICIBANK.NS", name: "ICICI Bank" },
-    { symbol: "HINDUNILVR.NS", name: "Hindustan Unilever" },
-    { symbol: "ITC.NS", name: "ITC Limited" },
-    { symbol: "BHARTIARTL.NS", name: "Bharti Airtel" },
-    { symbol: "SBIN.NS", name: "State Bank of India" },
-    { symbol: "BAJFINANCE.NS", name: "Bajaj Finance" },
-    { symbol: "WIPRO.NS", name: "Wipro Limited" },
-    { symbol: "AXISBANK.NS", name: "Axis Bank" },
-    // Popular US Stocks
-    { symbol: "AAPL", name: "Apple Inc." },
-    { symbol: "GOOGL", name: "Alphabet Inc." },
-    { symbol: "MSFT", name: "Microsoft Corporation" },
-    { symbol: "AMZN", name: "Amazon.com Inc." },
-    { symbol: "TSLA", name: "Tesla Inc." },
-    { symbol: "META", name: "Meta Platforms Inc." },
-    { symbol: "NVDA", name: "NVIDIA Corporation" },
-  ];
 
   useEffect(() => {
     if (user) {
@@ -93,32 +70,67 @@ const Watchlist = () => {
     }
   };
 
-  const addToWatchlist = async (stock: { symbol: string; name: string }) => {
+  const addToWatchlist = async () => {
+    if (!stockSymbol.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a stock symbol.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const symbol = stockSymbol.trim().toUpperCase();
+    
+    // Check if already in watchlist
+    if (watchlist.some(w => w.symbol === symbol)) {
+      toast({
+        title: "Already Added",
+        description: "This stock is already in your watchlist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      setAddingStock(true);
+      
+      // Validate stock by fetching data
+      const { data, error: fetchError } = await supabase.functions.invoke('get-stock-data', {
+        body: { symbols: [symbol] }
+      });
+
+      if (fetchError || !data?.stockData || data.stockData.length === 0) {
+        toast({
+          title: "Invalid Stock",
+          description: "Stock symbol not found. Please check and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const stockData = data.stockData[0];
+      
+      // Add to database
       const { error } = await supabase
         .from('watchlist')
         .insert({
           user_id: user?.id,
-          symbol: stock.symbol,
-          name: stock.name
+          symbol: stockData.symbol,
+          name: stockData.name
         });
 
       if (error) throw error;
 
-      const { data } = await supabase.functions.invoke('get-stock-data', {
-        body: { symbols: [stock.symbol] }
-      });
-
-      if (data?.stockData && data.stockData.length > 0) {
-        setWatchlist([...watchlist, data.stockData[0]]);
-      }
-
+      setWatchlist([...watchlist, stockData]);
+      
       toast({
         title: "Stock Added",
-        description: `${stock.name} added to your watchlist.`,
+        description: `${stockData.name} (${stockData.symbol}) added to your watchlist.`,
       });
+      
       setShowAddStock(false);
-      setSearchTerm("");
+      setStockSymbol("");
     } catch (error: any) {
       console.error('Error adding stock:', error);
       toast({
@@ -126,6 +138,8 @@ const Watchlist = () => {
         description: error.message || "Failed to add stock.",
         variant: "destructive",
       });
+    } finally {
+      setAddingStock(false);
     }
   };
 
@@ -155,12 +169,6 @@ const Watchlist = () => {
     }
   };
 
-  const filteredStocks = availableStocks.filter(
-    stock =>
-      (stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      !watchlist.some(w => w.symbol === stock.symbol)
-  );
 
   // Auto-refresh every 3 minutes
   useEffect(() => {
@@ -206,35 +214,35 @@ const Watchlist = () => {
           <Card className="mb-8 animate-fade-in">
             <CardHeader>
               <CardTitle>Add Stock to Watchlist</CardTitle>
-              <CardDescription>Search Indian (NSE) or global stocks</CardDescription>
+              <CardDescription>
+                Enter any stock symbol (e.g., AAPL for Apple, RELIANCE.NS for Reliance)
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Input
-                placeholder="Search by symbol or name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4"
-              />
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {filteredStocks.map((stock) => (
-                  <div
-                    key={stock.symbol}
-                    className="flex justify-between items-center p-3 hover:bg-accent rounded-lg cursor-pointer transition-all duration-200 hover:scale-[1.02]"
-                    onClick={() => addToWatchlist(stock)}
-                  >
-                    <div>
-                      <div className="font-semibold">{stock.symbol.replace('.NS', ' (NSE)')}</div>
-                      <div className="text-sm text-muted-foreground">{stock.name}</div>
-                    </div>
-                    <Plus className="h-4 w-4" />
-                  </div>
-                ))}
-                {filteredStocks.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">
-                    No stocks found
-                  </p>
-                )}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter stock symbol (e.g., AAPL, TSLA, TCS.NS)..."
+                  value={stockSymbol}
+                  onChange={(e) => setStockSymbol(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      addToWatchlist();
+                    }
+                  }}
+                  disabled={addingStock}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={addToWatchlist} 
+                  disabled={addingStock || !stockSymbol.trim()}
+                >
+                  {addingStock ? "Adding..." : "Add"}
+                </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                <strong>Tips:</strong> For Indian stocks, add .NS suffix (e.g., RELIANCE.NS). 
+                For US stocks, use the ticker symbol directly (e.g., AAPL, GOOGL).
+              </p>
             </CardContent>
           </Card>
         )}
