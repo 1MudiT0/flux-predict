@@ -15,6 +15,9 @@ interface Stock {
   change: number;
   changePercent: number;
   chartData: { time: string; price: number }[];
+  currency?: string;
+  marketState?: string;
+  exchange?: string;
 }
 
 const Watchlist = () => {
@@ -185,7 +188,7 @@ const Watchlist = () => {
               )}
             </div>
             <div className="flex items-center gap-4">
-              <p className="text-muted-foreground">Track your favorite stocks in real-time (INR)</p>
+              <p className="text-muted-foreground">Track your favorite stocks in real-time</p>
               {watchlist.length > 0 && (
                 <span className="text-xs text-muted-foreground">
                   Updated: {lastUpdate.toLocaleTimeString('en-IN')}
@@ -288,9 +291,9 @@ const Watchlist = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold mb-4">
-                    ₹{stock.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    {stock.currency === 'INR' ? '₹' : '$'}{stock.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                     <span className={`text-sm ml-2 ${stock.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {stock.change >= 0 ? '+' : ''}₹{stock.change.toFixed(2)}
+                      {stock.change >= 0 ? '+' : ''}{stock.currency === 'INR' ? '₹' : '$'}{Math.abs(stock.change).toFixed(2)}
                     </span>
                   </div>
                   {stock.chartData && stock.chartData.length > 0 && (
